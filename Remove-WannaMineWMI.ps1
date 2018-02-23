@@ -2,20 +2,26 @@
 .SYNOPSIS
   This is a script to hunt and delete WMI components created by the WannaMine malware during the February 2018 campaign. 
 .DESCRIPTION
-  This script will identify and delete the following WMI components used by WannaMinie in February 2018:
+  This script will identify and delete the following WMI components used by WannaMine in February 2018:
 	__EventFilters named "DSM Event Log Filter" 
 	__EventConsumers named "DSM Event Log Consumer"
 	__FilterToConsumerBindings using filters named "DSM Event Log Filter"
+	Classes named "Win32_Services" under the "root\default" namespace
   After removing the WMI components above, it will kill all Powershell processes besides the one that the script is running under (the user is given 5 seconds to cancel this action). 
   It also logs identification, removal, and failures to the Windows Powershell Event Log to allow for centralized tracking of remediation efforts. 
   As the TTPs associated with WannaMine change, this script will change to adapt to them. 
+  
+  Changelog:
+  1.0: Initial creation
+  1.1: Added removal of bad Win32_Services class created under the "root\default" namespace. Thanks to some good people for help here.
+  
 .OUTPUTS
   Windows Powershell Event Log (these descriptions are generalized; actual logs provide more specific information)
 	EventID 4444 - WMI component found on local system 
 	EventID 5555 - Successfully removed WMI component from local system
 	EventID 9999 - Failed to remove WMI component from local system
 .NOTES
-  Version:        1.0
+  Version:        1.1
   Author:         @nixg_
   Creation Date:  February 2018
   Purpose/Change: Initial script development
@@ -28,13 +34,14 @@
 $EventFilter = Get-WmiObject -Namespace "root\subscription" -Class '__EventFilter' | Where-Object {$_.Name -eq "DSM Event Log Filter"}
 $EventConsumer = Get-WmiObject -Namespace "root\subscription" -Class '__EventConsumer' | Where-Object {$_.Name -eq "DSM Event Log Consumer"}
 $FilterToConsumerBinding = Get-WmiObject -Namespace "root\subscription" -Class '__FilterToConsumerBinding' | Where-Object {$_.Filter -eq '__EventFilter.Name="DSM Event Log Filter"'}
+$Win32ServicesClass = Get-WmiObject -Namespace "root\default" -List | Where-Object {$_.Name -eq "Win32_Services"}
 
 $computer = $env:computername
 
 $removed = 0
 
 # Function only gets called if the WMI components were found
-function remove_and_log ($WMIComponent) {
+function remove_component ($WMIComponent) {
 	$class = $WMIComponent.__CLASS # for less clutter throughout code
 	Write-Host "[+] Found bad WMI component..." -foreground Green
 	Write-Host "[i] Component Class: $class" -foreground Yellow
@@ -64,24 +71,32 @@ function remove_and_log ($WMIComponent) {
 	}
 	
 if ($EventFilter) {
-	remove_and_log($EventFilter)
+	remove_component($EventFilter)
 	} else {
 	Write-Host "[-] Bad EventFilter not found." -foreground Red
 	}
 
 if ($EventConsumer) {
-	remove_and_log($EventConsumer)
+	remove_component($EventConsumer)
 	} else {
 	Write-Host "[-] Bad EventConsumer not found." -foreground Red
 	}
 	
 if ($FilterToConsumerBinding) {
-	remove_and_log($FilterToConsumerBinding)
+	remove_component($FilterToConsumerBinding)
 	} else {
 	Write-Host "[-] Bad FilterToConsumerBinding not found." -foreground Red
 	}
 	
-if ($removed -eq 3) {
+if ($Win32ServicesClass) {
+	$Win32ServicesClass | Remove-WmiObject
+	$script:removed++
+	Write-EventLog -LogName "Windows PowerShell" -Source "Powershell" -EventID 5555 -Message "Bad Win32_Services class was removed from $computer." 
+	} else {
+	Write-Host "[-] Bad Win32_Services class not found in namesace 'root\default'." -foreground Red
+	}
+	
+if ($removed -eq 4) {
     Write-Host "[+] Successfully removed all objects." -foreground Green
     Write-Host "[i] Killing all PowerShell processes (except this one) in 5 seconds..." -foreground Yellow
     Write-Host "[i] Press CTRL+C to cancel..." -foreground Yellow
