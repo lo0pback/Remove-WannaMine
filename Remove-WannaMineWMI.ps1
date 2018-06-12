@@ -30,10 +30,10 @@
 #>
 
 # Grab WMI components created by WannaMine 
-$EventFilter = Get-WmiObject -Namespace "root\subscription" -Class '__EventFilter' | Where-Object {"DSM Event Log Filter","SCM Events Log Filter" -contains $_.Name}
-$EventConsumer = Get-WmiObject -Namespace "root\subscription" -Class '__EventConsumer' | Where-Object {"DSM Event Log Consumer","SCM Events Log Consumer" -contains $_.Name}
-$FilterToConsumerBinding = Get-WmiObject -Namespace "root\subscription" -Class '__FilterToConsumerBinding' | Where-Object {'__EventFilter.Name="DSM Event Log Filter"','__EventFilter.Name="SCM Events Log Filter"' -contains $_.Filter}
-$EvilClass = Get-WmiObject -Namespace "root\default" -List | Where-Object {"Win32_Services","systemcore_Updater" -contains$_.Name}
+$EventFilter = Get-WmiObject -Namespace "root\subscription" -Class '__EventFilter' | Where-Object {"DSM Event Log Filter","SCM Events Log Filter","Windows Events Filter" -contains $_.Name}
+$EventConsumer = Get-WmiObject -Namespace "root\subscription" -Class '__EventConsumer' | Where-Object {"DSM Event Log Consumer","SCM Events Log Consumer","Windows Events Consumer" -contains $_.Name}
+$FilterToConsumerBinding = Get-WmiObject -Namespace "root\subscription" -Class '__FilterToConsumerBinding' | Where-Object {'__EventFilter.Name="DSM Event Log Filter"','__EventFilter.Name="SCM Events Log Filter"','__EventFilter.Name="Windows Events Filter"' -contains $_.Filter}
+$EvilClass = Get-WmiObject -Namespace "root\default" -List | Where-Object {"Win32_Services","systemcore_Updater","System_Anti_Virus_Core" -contains $_.Name}
 
 $computer = $env:computername
 
@@ -94,11 +94,8 @@ if ($EvilClass) {
 	} else {
 	Write-Host "[-] Bad WMI class not found in namespace 'root\default'." -foreground Red
 	}
-	
-if ($removed -eq 4) {
-    Write-Host "[+] Successfully removed all objects." -foreground Green
-    Write-Host "[i] Killing all PowerShell processes (except this one) in 5 seconds..." -foreground Yellow
-    Write-Host "[i] Press CTRL+C to cancel..." -foreground Yellow
-    Start-Sleep 5
-    Get-Process Powershell  | Where-Object { $_.ID -ne $pid } | Stop-Process
-    }
+
+Write-Host "[i] Killing all PowerShell processes (except this one) in 5 seconds..." -foreground Yellow
+Write-Host "[i] Press CTRL+C to cancel..." -foreground Yellow
+Start-Sleep 5
+Get-Process Powershell  | Where-Object { $_.ID -ne $pid } | Stop-Process
