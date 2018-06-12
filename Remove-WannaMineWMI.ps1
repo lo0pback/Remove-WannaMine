@@ -98,4 +98,4 @@ if ($EvilClass) {
 Write-Host "[i] Killing all PowerShell processes (except this one) in 5 seconds..." -foreground Yellow
 Write-Host "[i] Press CTRL+C to cancel..." -foreground Yellow
 Start-Sleep 5
-Get-Process Powershell  | Where-Object { $_.ID -ne $pid } | Stop-Process
+Get-Process Powershell  | Where-Object { $_.ID -ne $pid } | Stop-Process -Force
