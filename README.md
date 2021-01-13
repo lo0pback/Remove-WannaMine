@@ -1,2 +1,2 @@
-# dfir
-Scripts I've written for incident response. 
+# Remove-WannaMine
+PowerShell script to remove WannaMine when certain IOCs are used.
